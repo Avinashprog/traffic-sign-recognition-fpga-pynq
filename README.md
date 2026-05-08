@@ -275,7 +275,7 @@ Detected: No entry               | Confidence: 91.33% | Latency: 11.52ms
 
 | Name | Role |
 |---|---|
-| **AP25122210004** | Hardware Design, Model Training, Deployment |
+| **AP25122210011** | Hardware Design, Model Training, Deployment |
 
 **Institution:** [Your College Name]
 **Course:** AIML / Hardware AI & IoT
