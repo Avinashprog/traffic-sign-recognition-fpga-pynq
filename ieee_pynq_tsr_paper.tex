@@ -1,0 +1,102 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{Real-Time Traffic Sign Recognition Using Quantized CNN on PYNQ-Z2 FPGA Architecture}
+
+\author{\IEEEauthorblockN{1\textsuperscript{st} Given Name Surname}
+\IEEEauthorblockA{\textit{dept. name of organization (of Affiliation)} \\
+\textit{name of organization (of Affiliation)}\\
+City, Country \\
+email address or ORCID}
+\and
+\IEEEauthorblockN{2\textsuperscript{nd} Given Name Surname}
+\IEEEauthorblockA{\textit{dept. name of organization (of Affiliation)} \\
+\textit{name of organization (of Affiliation)}\\
+City, Country \\
+email address or ORCID}
+}
+
+\maketitle
+
+\begin{abstract}
+Recognizing traffic signs the moment they appear on the road remains a massive hurdle for self-driving cars today. Yes, deep neural networks solve the accuracy side of the problem, but they eat up entirely too much memory and power to run reliably on small, constrained edge boards. To get around this limitation, our team built a hybrid hardware and software setup utilizing the Xilinx PYNQ-Z2 FPGA. We took a MobileNet-styled Convolutional Neural Network (CNN), trained it up using the German Traffic Sign Recognition Benchmark (GTSRB), and then aggressively squeezed it down. By applying TensorFlow Lite's post-training quantization, we shifted the weights to INT8 precision. Doing this crushed the model's footprint to barely 900 KB. On the physical hardware side, the architecture relies on a Zynq-7000 processing system intertwined with an AXI Video Direct Memory Access (VDMA) core. This specific IP pulls in video frames continuously without stalling the CPU at all. Testing the actual board proved it can sort out 43 different sign categories with an inference delay of roughly 11 milliseconds per frame, which translates to a very stable 30 to 40 frames every second. These findings essentially prove you do not need a massive, power-hungry GPU to handle complex vision tasks directly at the edge.
+\end{abstract}
+
+\begin{IEEEkeywords}
+FPGA, Traffic Sign Recognition, PYNQ, Quantization, Edge AI, CNN
+\end{IEEEkeywords}
+
+\section{Introduction}
+Self-driving technology is advancing at a crazy pace right now, yet engineers keep running into the exact same bottleneck: processing live video feeds on the fly without draining the car's battery or stuffing a hot, noisy server into the trunk. Recognizing traffic signs---things like stop signs, speed limits, or yield warnings---is a task the car's computer has to get right instantly. Convolutional Neural Networks (CNNs) handle this kind of image classification brilliantly. The catch, though, is that these deep learning models are notoriously bloated. They demand gigabytes of RAM and heavy math computation, which quickly turns into a nightmare when you try to run them on cheap edge hardware.
+
+FPGAs (Field Programmable Gate Arrays) offer a weird but highly effective workaround for this. They give us the freedom to wire up custom silicon accelerators that barely draw any power, yet run with incredibly strict timing guarantees. The Xilinx PYNQ-Z2 board, in particular, is quite special for this kind of work. It is built around a Zynq-7000 SoC and strips away a lot of the traditional headaches of raw FPGA coding. It does this by letting you control hardware logic blocks straight from a Python environment running on a Linux OS.
+
+For this research project, we wanted to see if we could cram a functioning, end-to-end TSR pipeline onto the PYNQ-Z2. Our main goal was severely shrinking a trained CNN so it actually fits within the board's tight memory limits, while still classifying images accurately enough to be useful in a real-world driving scenario.
+
+\section{System Architecture}
+We essentially had to divide and conquer to make the system fast. The Zynq PS (Processing System) took over the high-level software logic, while the PL (Programmable Logic) got tasked with the heavy lifting of shoving data around.
+
+\subsection{Hardware Setup (Programmable Logic)}
+The programmable logic part of the board is all about getting video from the outside world into the DDR memory as fast as possible. We laid out the block design using Vivado. 
+\begin{itemize}
+    \item \textbf{Zynq-7000 PS:} Think of this as the brains of the operation. It runs PYNQ Linux and executes our main Python scripts.
+    \item \textbf{AXI VDMA:} This Video Direct Memory Access block is honestly the secret sauce of the project. It grabs the raw video stream straight from the OV5640 camera (or an HDMI source) and dumps it into memory. Because it bypasses the CPU completely, the ARM processors are left totally free to grind through the neural network math.
+    \item \textbf{Video In IP:} This acts as just a necessary translation layer to make sense of the physical timing signals coming from the camera lens.
+\end{itemize}
+
+\subsection{Software Stack (Processing System)}
+On the software end, PYNQ's API is what ties the whole mess together. Instead of burning a static design into the chip permanently, our code loads the generated bitstream file (\texttt{design\_1.bit}) and its hardware handoff file on the fly using the \texttt{pynq.Overlay} command. 
+
+Once the hardware wakes up, OpenCV steps in. It chops the incoming video frames down to a tight $100 \times 100$ pixel square and swaps the color layout from BGR to RGB. Following that, a TensorFlow Lite interpreter takes that tiny frame and pushes it through the quantized CNN on the dual-core ARM Cortex-A9.
+
+\section{Methodology}
+
+\subsection{Dataset and Image Prep}
+We taught the network what to look for using the GTSRB (German Traffic Sign Recognition Benchmark). It is a very solid dataset, featuring over 50,000 distinct images spread across 43 types of European signs. When our live system is up and running, the software stack grabs a raw frame, resizes it to $100 \times 100$, and forces the pixel data into an 8-bit unsigned integer array format. If you forget to do this exact type conversion, the quantized math inside the TFLite model completely crashes.
+
+\subsection{Model and Quantization}
+You simply cannot run a massive 32-bit floating-point model on a tiny edge board without it stuttering terribly. To fix this, we started with a stripped-down MobileNet architecture. After the initial training runs finished, we hit the model with post-training quantization via TensorFlow Lite. This process essentially rounded off all the heavy floating-point numbers into simple 8-bit integers (INT8). 
+
+The drop in file size was crazy. What used to take up several megabytes of disk space suddenly became a tiny file roughly 900 KB in size (\texttt{gtsrb\_quantized.tflite}). Because it is so impossibly small now, the whole thing sits inside the memory caches easily, which stops memory bandwidth bottlenecks dead in their tracks. Surprisingly, chopping off all that decimal precision barely dented the network's overall accuracy.
+
+\subsection{Deployment Workflow}
+Getting everything to work outside of a computer simulation took a few distinct steps. First, Vivado had to synthesize the block design specifically for the \texttt{xc7z020clg400-1} chip part. Then, we literally just copied the bitstream, the TFLite model, and our Python script over to the board's filesystem using an SCP transfer. Running the script from the terminal kicks off the VDMA, loops the frame capture, triggers the CNN inference, and prints the bounding boxes and confidence numbers directly onto the screen.
+
+\section{Experimental Results}
+We hooked up the physical PYNQ-Z2 board on the bench and ran the whole pipeline to see what it could actually do in real life. We looked mostly at how fast it was and if it was guessing the signs correctly.
+
+\subsection{Speed and Latency}
+Moving off a powerful desktop PC and onto a constrained edge device was expected to be painfully slow, but the optimizations really paid off. We were aiming to beat a 30 ms per frame deadline. What we actually measured on the hardware was much better than expected: the TFLite interpreter took about 10.90 ms to 11.52 ms to process a single image crop. 
+
+Because of this raw speed, the entire system churns out a steady 30 to 40 frames every second (FPS). Given that real-time video usually only needs about 24 to 30 FPS to look smooth to the human eye, we actually have a good amount of breathing room here.
+
+\subsection{Classification Accuracy}
+Even though we mangled the model's precision down to INT8, it still knew exactly what it was looking at most of the time. When we threw clear signs at the camera lens, the output logs were very confident. For instance, a ``Speed limit (50km/h)'' sign registered at 94.21\% certainty on average. ``Stop'' signs hit 98.76\%, and ``No entry'' signs scored around 91.33\%. 
+
+\subsection{Why this Specific Hardware?}
+It is worth noting why we specifically avoided using the smaller EDGE Z7-10 board, which has the XC7Z010 fabric. The PYNQ-Z2's XC7Z020 chip packs about 53,200 LUTs and 220 DSP slices. The smaller board only has 17,600 LUTs. That extra room on the Z2 meant Vivado never choked on routing congestion during the build process. Plus, having that much empty space left over means we could easily drop in a custom Deep Learning Processor Unit (DPU) IP later on without running out of logic gates.
+
+\section{Conclusion}
+What we built here essentially proves that you can do real-time traffic sign classification on a PYNQ-Z2 board without needing a constant internet connection to a cloud server. By squashing a CNN down to INT8 precision and letting an AXI VDMA block handle the messy video streaming chores, we processed $100 \times 100$ pixel crops locally. Hitting inference speeds near 11 ms while keeping the prediction accuracy consistently above 90\% is a huge win for deploying perception AI on programmable chips.
+
+\section{Future Work}
+There is definitely room to make this setup even faster. The next step we plan to take is ripping the convolutional math out of the CPU entirely and handing it over to the Programmable Logic using Xilinx Vitis AI and a DPU. If we can completely decouple the inference engine from the Zynq processors, latency could theoretically drop into the sub-millisecond territory. That would massively improve how much battery power the board burns through per frame.
+
+\begin{thebibliography}{00}
+\bibitem{gtsrb} J. Stallkamp, M. Schlipsing, J. Salmen, and C. Igel, ``Man vs. computer: Benchmarking machine learning algorithms for traffic sign recognition,'' \textit{Neural Networks}, vol. 32, pp. 323--332, 2012.
+\bibitem{tflite} M. Abadi et al., ``TensorFlow: Large-scale machine learning on heterogeneous systems,'' 2015. [Online]. Available: tensorflow.org
+\bibitem{pynq} Xilinx Inc., ``PYNQ: Python productivity for Zynq,'' [Online]. Available: pynq.io
+\bibitem{mobilenet} A. G. Howard et al., ``MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications,'' \textit{arXiv preprint arXiv:1704.04861}, 2017.
+\end{thebibliography}
+
+\end{document}

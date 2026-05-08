@@ -1,0 +1,56 @@
+# ============================================================
+#  PYNQ-Z2 Traffic Sign Recognition — .gitignore
+# ============================================================
+
+# ── Vivado Auto-Generated Logs & Journals ──────────────────
+*.jou
+*.log
+*.backup.jou
+*.backup.log
+
+# ── Xilinx Temp Folders ───────────────────────────────────
+.Xil/
+
+# ── Vivado Build Outputs (auto-regenerated, very large) ───
+PYNQ_TSR_Project/PYNQ_TSR_Project.cache/
+PYNQ_TSR_Project/PYNQ_TSR_Project.runs/
+PYNQ_TSR_Project/PYNQ_TSR_Project.sim/
+PYNQ_TSR_Project/PYNQ_TSR_Project.ip_user_files/
+PYNQ_TSR_Project/PYNQ_TSR_Project.hw/
+
+# ── Large ML Model Files (host on Google Drive / HuggingFace) ──
+*.keras
+best_gtsrb_model.keras
+google colab/final_gtsrb_model.keras
+
+# ── Binary Documents (use .md versions instead) ───────────
+*.docx
+*.pptx
+
+# ── Temporary / Extracted Content ─────────────────────────
+docx_extract/
+ppt_extract/
+ppt_images/
+docx_content.txt
+steps
+
+# ── Large Report Images (>5 MB) ───────────────────────────
+report_images/image1.png
+
+# ── Python Cache ──────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Jupyter Notebook Checkpoints ──────────────────────────
+.ipynb_checkpoints/
+
+# ── OS Files ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini

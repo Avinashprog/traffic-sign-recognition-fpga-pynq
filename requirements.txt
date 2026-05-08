@@ -1,0 +1,28 @@
+# ============================================================
+#  PYNQ-Z2 Traffic Sign Recognition — Python Requirements
+# ============================================================
+
+# Core ML / Inference
+tensorflow>=2.10.0
+tflite-runtime>=2.13.0     # On PYNQ-Z2 ARM board use the .whl file provided
+
+# Image Processing
+opencv-python>=4.7.0
+numpy>=1.23.0
+Pillow>=9.0.0
+
+# PYNQ API (pre-installed on PYNQ-Z2 board)
+# pynq>=2.7.0              # Do NOT pip install; comes with PYNQ OS image
+
+# Jupyter Notebook
+notebook>=6.5.0
+ipykernel>=6.0.0
+
+# Report & PPT generation (dev only)
+python-docx>=0.8.11
+python-pptx>=0.6.21
+matplotlib>=3.6.0
+seaborn>=0.12.0
+
+# LaTeX (optional — for IEEE paper build)
+# Use: pdflatex ieee_pynq_tsr_paper.tex
